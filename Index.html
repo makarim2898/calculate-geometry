@@ -16,7 +16,7 @@
 
 <canvas id="preview" width="300" height="300"></canvas>
 
-  <h3>Koordinat Asli (X, Y) — Center Toolpath</h3>
+  <h3>Koordinat Asli (X, Y) — Tanpa Offset</h3>
   <textarea id="coords" readonly></textarea>  <h3>G-Code (tanpa Z) — Sudah Di-offset</h3>
   <textarea id="gcode" readonly></textarea>  <script>
     let gcodeText = '';
@@ -35,27 +35,34 @@
       const cx = canvas.width / 2;
       const cy = canvas.height / 2;
 
-      // Hitung radius berdasarkan flat to flat
       const baseRadius = flat / (2 * Math.sin(Math.PI / 6));
-
-      // Offset berdasarkan jenis kepala baut
       const offset = (type === 'hex') ? tool / 2 : -tool / 2;
       const centerRadius = baseRadius + offset;
 
-      const coords = [];
+      // Koordinat asli tanpa offset (untuk display & referensi)
+      const coordsBase = [];
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 6 + i * Math.PI / 3;
+        const x = +(baseRadius * Math.cos(angle)).toFixed(4);
+        const y = +(baseRadius * Math.sin(angle)).toFixed(4);
+        coordsBase.push({ x, y });
+      }
+      coordsBase.push(coordsBase[0]);
+
+      // Koordinat untuk G-code (sudah offset)
+      const coordsOffset = [];
       for (let i = 0; i < 6; i++) {
         const angle = Math.PI / 6 + i * Math.PI / 3;
         const x = +(centerRadius * Math.cos(angle)).toFixed(4);
         const y = +(centerRadius * Math.sin(angle)).toFixed(4);
-        coords.push({ x, y });
+        coordsOffset.push({ x, y });
       }
+      coordsOffset.push(coordsOffset[0]);
 
-      coords.push(coords[0]); // tutup path
-
-      // Gambar toolpath
+      // Gambar toolpath yang offset (real path)
       ctx.beginPath();
       ctx.strokeStyle = '#000';
-      coords.forEach((p, i) => {
+      coordsOffset.forEach((p, i) => {
         const scale = 1.2;
         const x = cx + p.x * scale;
         const y = cy - p.y * scale;
@@ -64,12 +71,12 @@
       });
       ctx.stroke();
 
-      // Output koordinat asli (center path)
-      const coordText = coords.map(p => `X${p.x} Y${p.y}`).join("\n");
+      // Output koordinat asli (tanpa offset)
+      const coordText = coordsBase.map(p => `X${p.x} Y${p.y}`).join("\n");
       document.getElementById('coords').value = coordText;
 
-      // Output G-code (sama dengan koordinat asli, dianggap sudah offset)
-      gcodeText = coords.map(p => `G01 X${p.x} Y${p.y}`).join("\n");
+      // Output G-code (sudah offset)
+      gcodeText = coordsOffset.map(p => `G01 X${p.x} Y${p.y}`).join("\n");
       document.getElementById('gcode').value = gcodeText;
     }
 
